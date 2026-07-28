@@ -220,15 +220,7 @@ git branch                    # list branches; * marks HEAD</code></pre>
           between <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> and <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>
           markers, and you resolve it by editing the file to the correct final state, staging it,
           and completing the merge. Conflicts are not failures — they are the system refusing to
-<<<<<<< HEAD
-          guess about genuinely ambiguous intent. One related concept deserves a sentence:
-          <strong>rebase</strong> replays your branch's commits on top of the target's tip,
-          producing a straight-line history instead of a merge commit. It is tidy but rewrites
-          commits; the working rule for this course is simple — merge, and never rebase anything
-          already pushed.</p>
-=======
           guess about genuinely ambiguous intent.</p>
->>>>>>> main
         <div class="code-block">
           <span class="code-block__label">merging</span>
           <pre><code>git switch main
@@ -237,8 +229,6 @@ git merge feature/rag         # fast-forward, or three-way merge with a merge co
 git add app/chat.py
 git commit                    # completes the merge</code></pre>
         </div>
-<<<<<<< HEAD
-=======
 
         <h3>Merge vs rebase — the same result, two different histories</h3>
         <p class="prose">Git offers a second way to bring branches together, and the choice between
@@ -442,7 +432,6 @@ git push --force-with-lease     # safer than --force: refuses if someone else pu
             The reflog is git's undo history, and it is the reason experienced users experiment
             fearlessly.</p>
         </div>
->>>>>>> main
       </section>
 
       <!-- ============ REMOTES ============ -->
