@@ -495,6 +495,14 @@ def agents_list() -> AgentListResponse:
     summaries: list[PersonaSummary] = []
     for p in personas:
         hosted = hosted_by_name.get(p.name)
+        # Not on the first page? Try a direct id lookup (cached at deploy time)
+        # before concluding it isn't hosted — the shared project's assistant
+        # list is capped at ~20, so an older deploy can simply be off-page.
+        if not hosted and availability["available"]:
+            try:
+                hosted = foundry_agent.find_hosted(p.name)
+            except Exception:                      # noqa: BLE001 - degrade to "local", not crash
+                hosted = None
         runs_on = "unknown" if not availability["available"] else ("both" if hosted else "local")
         summaries.append(PersonaSummary(**p.summary(), runs_on=runs_on,
                                         hosted=HostedAgent(**hosted) if hosted else None))

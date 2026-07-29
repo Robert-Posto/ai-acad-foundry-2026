@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Libra Assist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f3ede0;
+    --panel: #fbf8f0;
+    --border: #ddd2b8;
+    --text: #2a2419;
+    --muted: #8c7f63;
+    --accent: #1f6f5c;
+    --user-text: #fffdf7;
+    --refuse-bg: #fbf0dc;
+    --refuse-border: #c1852a;
+    --error-bg: #fae4de;
+    --error-border: #b04632;
+    --serif: "Fraunces", Georgia, serif;
+    --sans: "Inter", -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16140f;
+      --panel: #201c15;
+      --border: #3a3325;
+      --text: #ece3cf;
+      --muted: #9c9077;
+      --user-text: #16140f;
+      --refuse-bg: #2c2412;
+      --refuse-border: #c1852a;
+      --error-bg: #2c1a15;
+      --error-border: #c1614a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 650px at 6% -12%, color-mix(in srgb, var(--accent) 4%, transparent), transparent 60%),
+      radial-gradient(800px 550px at 102% 108%, color-mix(in srgb, var(--accent) 3%, transparent), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow: hidden;
+  }
+  #app { display: flex; height: 100vh; }
+
+  /* ---------- sidebar: the ledger of who you can talk to ---------- */
+  #sidebar {
+    width: 300px;
+    flex: none;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+  #sidebar > header {
+    padding: 22px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .crest {
+    width: 38px; height: 38px; border-radius: 50%; flex: none;
+    background: var(--panel);
+    border: 1.5px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-weight: 600; font-size: 17px; color: var(--accent);
+  }
+  #sidebar h1 {
+    font-family: var(--serif); font-weight: 600; font-size: 20px; margin: 0;
+    letter-spacing: 0.01em;
+  }
+  #sidebar .sub {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px;
+  }
+
+  #contacts { flex: 1; overflow-y: auto; padding: 10px 10px; }
+  .contact {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 11px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    border-left: 2.5px solid transparent;
+    position: relative;
+    transition: background 0.12s ease;
+  }
+  .contact:hover { background: color-mix(in srgb, var(--paccent, var(--accent)) 5%, transparent); }
+  .contact.active {
+    border-left-color: var(--paccent, var(--accent));
+    background: color-mix(in srgb, var(--paccent, var(--accent)) 8%, transparent);
+  }
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%; flex: none;
+    background: var(--paccent, var(--accent)); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-weight: 600; font-size: 13px;
+  }
+  .contact .meta { min-width: 0; padding-top: 1px; }
+  .contact .name { font-weight: 600; font-size: 13.5px; }
+  .contact .desc {
+    font-size: 11.5px; color: var(--muted); margin-top: 1px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; line-height: 1.35;
+  }
+  .contact .runs {
+    display: inline-block; margin-top: 5px; font-size: 9px; font-family: var(--mono);
+    padding: 1px 7px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--muted);
+  }
+
+  #sidebar > footer {
+    padding: 10px 18px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  #statusLine {
+    font-size: 10.5px; color: var(--muted); font-family: var(--mono);
+    display: flex; align-items: center;
+  }
+  #statusDot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 6px; }
+  #statusDot.ok { background: #4d9a72; }
+  #statusDot.bad { background: var(--error-border); }
+  #settingsBtn {
+    background: none; border: 1px solid var(--border); border-radius: 6px;
+    width: 24px; height: 24px; color: var(--muted); cursor: pointer; font-size: 12px;
+    flex: none; display: flex; align-items: center; justify-content: center;
+  }
+  #settingsBtn:hover { color: var(--text); border-color: var(--muted); }
+  #settingsPanel {
+    display: none; padding: 0 18px 12px; border-top: 1px solid var(--border);
+  }
+  #settingsPanel.open { display: block; }
+  #settingsPanel label {
+    font-size: 9.5px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.06em; font-family: var(--mono); display: block; margin: 10px 0 4px;
+  }
+  #baseUrl {
+    width: 100%; font-size: 10.5px; color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 8px; font-family: var(--mono);
+  }
+
+  /* ---------- main column ---------- */
+  #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #chatHeader {
+    padding: 18px 28px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+    background: var(--panel);
+  }
+  #chatHeader .name {
+    font-family: var(--serif); font-weight: 600; font-size: 19px;
+    color: var(--paccent, var(--accent));
+  }
+  #chatHeader .desc { font-size: 12px; color: var(--muted); margin-top: 2px; max-width: 60ch; }
+
+  .mode-toggle {
+    display: flex; border: 1px solid var(--border); border-radius: 999px;
+    overflow: hidden; flex: none; background: var(--bg);
+  }
+  .mode-btn {
+    border: none; background: transparent; color: var(--muted);
+    font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em;
+    font-size: 10.5px; padding: 7px 14px; cursor: pointer; font-weight: 600;
+  }
+  .mode-btn.active { background: var(--paccent, var(--accent)); color: #fff; }
+  .mode-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .mode-hint { font-size: 10.5px; color: var(--muted); margin-top: 5px; text-align: right; font-style: italic; }
+  #clearChat {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 11px; font-family: var(--mono); text-decoration: underline;
+    text-underline-offset: 2px; padding: 0; margin-top: 6px; display: block; margin-left: auto;
+  }
+  #clearChat:hover { color: var(--paccent, var(--accent)); }
+  .run-tag {
+    display: inline-block; font-size: 9.5px; font-family: var(--mono);
+    color: var(--muted); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  #thread { flex: 1; overflow-y: auto; padding: 28px; display: flex; flex-direction: column; gap: 16px; }
+  .row { display: flex; }
+  .row.user { justify-content: flex-end; }
+  .row.assistant { justify-content: flex-start; }
+
+  .bubble {
+    max-width: 620px;
+    padding: 13px 16px;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    position: relative;
+  }
+  .row.user .bubble {
+    background: var(--paccent, var(--accent)); color: var(--user-text);
+    border-radius: 16px 16px 6px 16px;
+  }
+  .row.assistant .bubble {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px 16px 16px 16px;
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--text) 8%, transparent);
+  }
+  .row.assistant .bubble.refused {
+    background: var(--refuse-bg); border: 1px solid var(--refuse-border);
+    box-shadow: none;
+  }
+  .row.assistant .bubble.error {
+    background: var(--error-bg); border: 1px solid var(--error-border);
+    box-shadow: none;
+  }
+  .refused-flag {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 10.5px; font-weight: 600; color: var(--refuse-border);
+    margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  .citations { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 7px; }
+  .citation-chip {
+    font-size: 10.5px; font-family: var(--mono); font-weight: 600;
+    background: color-mix(in srgb, var(--paccent, var(--accent)) 9%, var(--panel));
+    color: var(--paccent, var(--accent));
+    border: none; border-left: 2px solid var(--paccent, var(--accent));
+    border-radius: 4px;
+    padding: 4px 10px 4px 8px; cursor: pointer;
+  }
+  .citation-chip:hover { background: color-mix(in srgb, var(--paccent, var(--accent)) 16%, var(--panel)); }
+  .source-card {
+    margin-top: 9px; padding: 10px 12px; border-radius: 8px;
+    background: var(--bg); border: 1px solid var(--border);
+    font-size: 12px; display: none;
+  }
+  .source-card.open { display: block; }
+  .source-card .meta {
+    display: flex; justify-content: space-between; color: var(--muted);
+    margin-bottom: 5px; font-family: var(--mono); font-size: 10.5px;
+  }
+  .source-card .score { color: var(--paccent, var(--accent)); font-weight: 700; }
+
+  .typing {
+    color: var(--muted); font-family: var(--serif); font-style: italic;
+    font-size: 13.5px; padding: 0 28px 14px;
+  }
+
+  #composer {
+    border-top: 1px solid var(--border); background: var(--panel);
+    padding: 16px 28px; display: flex; gap: 10px; align-items: flex-end;
+  }
+  #question {
+    flex: 1; resize: none; min-height: 44px; max-height: 140px;
+    border: 1px solid var(--border); border-radius: 12px; padding: 11px 14px;
+    font-family: var(--sans); font-size: 14px; background: var(--bg); color: var(--text);
+  }
+  #question:focus { outline: none; border-color: var(--paccent, var(--accent)); }
+  #send {
+    background: var(--paccent, var(--accent)); color: #fff; border: none; border-radius: 12px;
+    padding: 12px 22px; font-weight: 600; cursor: pointer; font-size: 14px;
+    font-family: var(--serif);
+  }
+  #send:disabled { opacity: 0.5; cursor: default; }
+  .empty {
+    color: var(--muted); font-family: var(--serif); font-style: italic;
+    font-size: 14px; text-align: center; margin-top: 48px;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <aside id="sidebar">
+    <header>
+      <div class="crest">L</div>
+      <div>
+        <h1>Libra Assist</h1>
+        <div class="sub">onboarding ledger</div>
+      </div>
+    </header>
+    <div id="contacts"><div class="empty">Loading agents…</div></div>
+    <footer>
+      <div id="statusLine"><span id="statusDot"></span><span id="statusText">checking…</span></div>
+      <button id="settingsBtn" title="Backend settings">⚙</button>
+    </footer>
+    <div id="settingsPanel">
+      <label for="baseUrl">Backend URL</label>
+      <input id="baseUrl" type="text" value="http://localhost:7799" spellcheck="false" />
+    </div>
+  </aside>
+
+  <main id="main">
+    <div id="chatHeader">
+      <div>
+        <div class="name" id="activeName">Select an agent</div>
+        <div class="desc" id="activeDesc"></div>
+      </div>
+      <div>
+        <div id="modeToggle" class="mode-toggle">
+          <button class="mode-btn" data-mode="local">local agent</button>
+          <button class="mode-btn" data-mode="foundry">Foundry agent</button>
+        </div>
+        <div class="mode-hint" id="modeHint"></div>
+        <button id="clearChat">clear conversation</button>
+      </div>
+    </div>
+    <div id="thread"><div class="empty">Pick a persona on the left, then ask about opening or activating a Libra Bank account.</div></div>
+    <div class="typing" id="typing" style="display:none">Libra Assist is thinking…</div>
+    <div id="composer">
+      <textarea id="question" placeholder="Ask about eligibility, fees, the welcome bonus, activation…" rows="1"></textarea>
+      <button id="send">Send</button>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const baseUrlInput = $('baseUrl');
+const base = () => baseUrlInput.value.trim().replace(/\/+$/, '');
+
+let agents = [];
+let active = null;
+let mode = 'local';
+let foundryInfo = { available: false, reason: null };
+const conversations = {}; // { personaName: [{role, text, sources, refused, error}] }
+
+// Each persona gets its own identity colour, cycling through a curated,
+// ledger-appropriate palette — deterministic by position in the agent list.
+const PERSONA_PALETTE = ['#1f6f5c', '#33507a', '#b8563c', '#7a3b5e', '#a97a1f', '#3c6e47'];
+function personaColor(name) {
+  const idx = agents.findIndex(a => a.name === name);
+  return PERSONA_PALETTE[(idx < 0 ? 0 : idx) % PERSONA_PALETTE.length];
+}
+
+const REFUSAL_HINTS = [
+  'does not include', 'do not include', 'not include any information',
+  "cannot state", "can't state", "i don't have", "i do not have",
+  'no information about', 'not covered', 'missing from the provided',
+  'not present in the provided', 'outside the scope', "i can't answer",
+  'not in the provided documents', "isn't in the provided",
+];
+
+function looksLikeRefusal(text, retrievedCount) {
+  if (retrievedCount === 0) return true;
+  // Only the OPENING of the answer counts. A genuine refusal leads with it
+  // ("I don't know...", "The provided documents contain no information...");
+  // a mostly-grounded answer that later admits one missing sub-detail should
+  // not be painted as a full refusal.
+  const lead = text.slice(0, 200).toLowerCase();
+  return REFUSAL_HINTS.some(h => lead.includes(h));
+}
+
+function initials(name) {
+  return name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(base() + path, {
+    headers: { 'Content-Type': 'application/json' }, ...options,
+  });
+  let body;
+  try { body = await res.json(); } catch { body = null; }
+  if (!res.ok) throw new Error((body && body.detail) || res.statusText);
+  return body;
+}
+
+async function loadAgents() {
+  const dot = $('statusDot'), text = $('statusText');
+  try {
+    const health = await api('/health');
+    dot.className = 'ok'; text.textContent = `online · ${health.llm.provider}/${health.llm.model}`;
+  } catch (e) {
+    dot.className = 'bad'; text.textContent = 'backend unreachable';
+    $('contacts').innerHTML = `<div class="empty">Can't reach ${base()} — check the URL and that the backend is running.</div>`;
+    return;
+  }
+  try {
+    const data = await api('/agents');
+    agents = data.personas;
+    foundryInfo = data.foundry || { available: false, reason: null };
+    renderContacts();
+    if (agents.length) selectAgent(agents[0].name);
+  } catch (e) {
+    $('contacts').innerHTML = `<div class="empty">Error loading agents: ${e.message}</div>`;
+  }
+}
+
+function renderContacts() {
+  $('contacts').innerHTML = agents.map(a => `
+    <div class="contact ${a.name === active ? 'active' : ''}" data-name="${a.name}" style="--paccent: ${personaColor(a.name)}">
+      <div class="avatar">${initials(a.display_name)}</div>
+      <div class="meta">
+        <div class="name">${a.display_name}</div>
+        <div class="desc">${a.description}</div>
+        <span class="runs">${a.runs_on}</span>
+      </div>
+    </div>
+  `).join('');
+  [...document.querySelectorAll('.contact')].forEach(el =>
+    el.addEventListener('click', () => selectAgent(el.dataset.name)));
+}
+
+function selectAgent(name) {
+  active = name;
+  const a = agents.find(x => x.name === name);
+  $('activeName').textContent = a.display_name;
+  $('activeDesc').textContent = a.description;
+  document.documentElement.style.setProperty('--paccent', personaColor(name));
+  renderContacts();
+  renderThread();
+  updateModeToggle();
+}
+
+function updateModeToggle() {
+  const a = agents.find(x => x.name === active);
+  if (!a) return;
+
+  const localImpossible = a.runs_on === 'foundry'; // hosted only, no local JSON file
+  const isHosted = a.runs_on === 'both' || a.runs_on === 'foundry';
+  const foundryBlocked = !foundryInfo.available || !isHosted;
+
+  if (foundryBlocked && mode === 'foundry') mode = 'local';
+  else if (localImpossible && mode !== 'foundry') mode = 'foundry';
+
+  const localBtn = document.querySelector('.mode-btn[data-mode="local"]');
+  const foundryBtn = document.querySelector('.mode-btn[data-mode="foundry"]');
+  localBtn.disabled = localImpossible;
+  foundryBtn.disabled = foundryBlocked;
+  localBtn.classList.toggle('active', mode === 'local');
+  foundryBtn.classList.toggle('active', mode === 'foundry');
+
+  let hint = '';
+  if (foundryBlocked) {
+    hint = !foundryInfo.available
+      ? (foundryInfo.reason || 'Foundry Agent Service unreachable')
+      : 'Not deployed to Foundry';
+  } else if (localImpossible) {
+    hint = 'No local file for this agent — Foundry only';
+  }
+  $('modeHint').textContent = hint;
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.mode-btn');
+  if (!btn || btn.disabled) return;
+  mode = btn.dataset.mode;
+  updateModeToggle();
+});
+
+function renderThread() {
+  const thread = $('thread');
+  const msgs = conversations[active] || [];
+  if (!msgs.length) {
+    thread.innerHTML = '<div class="empty">Say hello — ask about eligibility, fees, the welcome bonus, or how to activate your account.</div>';
+    return;
+  }
+  thread.innerHTML = msgs.map((m, i) => {
+    if (m.role === 'user') {
+      return `<div class="row user"><div class="bubble">${escapeHtml(m.text)}</div></div>`;
+    }
+    const cls = m.error ? 'error' : (m.refused ? 'refused' : '');
+    const flag = m.error
+      ? `<div class="refused-flag">⚠ backend error</div>`
+      : (m.refused ? `<div class="refused-flag">⚠ could not find this in the knowledge base</div>` : '');
+    const chips = (m.sources || []).map((s, idx) => `
+      <span class="citation-chip" data-msg="${i}" data-src="${idx}">[${idx + 1}] ${s.source || 'source'} · ${s.score.toFixed(2)}</span>
+    `).join('');
+    const cards = (m.sources || []).map((s, idx) => `
+      <div class="source-card" data-msg="${i}" data-src="${idx}" id="src-${i}-${idx}">
+        <div class="meta"><span>${s.source || '(no source)'} · chunk ${s.index ?? '?'}</span><span class="score">score ${s.score.toFixed(4)}</span></div>
+        <div>${escapeHtml(s.text)}</div>
+      </div>
+    `).join('');
+    const runTag = m.ranMode ? `<div class="run-tag">ran via ${m.ranMode}</div>` : '';
+    return `<div class="row assistant">
+      <div class="bubble ${cls}">
+        ${flag}
+        ${escapeHtml(m.text)}
+        ${chips ? `<div class="citations">${chips}</div>${cards}` : ''}
+        ${runTag}
+      </div>
+    </div>`;
+  }).join('');
+  thread.scrollTop = thread.scrollHeight;
+
+  [...document.querySelectorAll('.citation-chip')].forEach(chip => {
+    chip.addEventListener('click', () => {
+      const card = document.getElementById(`src-${chip.dataset.msg}-${chip.dataset.src}`);
+      card.classList.toggle('open');
+    });
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+async function send() {
+  const q = $('question').value.trim();
+  if (!q || !active) return;
+  $('question').value = '';
+  autoGrow();
+  conversations[active] = conversations[active] || [];
+  conversations[active].push({ role: 'user', text: q });
+  renderThread();
+
+  $('send').disabled = true;
+  $('typing').style.display = 'block';
+  try {
+    const data = await api('/ask', {
+      method: 'POST',
+      body: JSON.stringify({ question: q, use_rag: true, agent: active, agent_mode: mode }),
+    });
+    const refused = looksLikeRefusal(data.answer, (data.retrieved || []).length);
+    conversations[active].push({
+      role: 'assistant', text: data.answer, sources: data.retrieved || [], refused,
+      ranMode: data.agent ? data.agent.mode : mode,
+    });
+  } catch (e) {
+    conversations[active].push({ role: 'assistant', text: e.message, error: true });
+  }
+  $('typing').style.display = 'none';
+  $('send').disabled = false;
+  renderThread();
+}
+
+function autoGrow() {
+  const t = $('question');
+  t.style.height = 'auto';
+  t.style.height = Math.min(140, t.scrollHeight) + 'px';
+}
+
+$('send').addEventListener('click', send);
+$('question').addEventListener('input', autoGrow);
+$('question').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+$('baseUrl').addEventListener('change', loadAgents);
+$('settingsBtn').addEventListener('click', () => $('settingsPanel').classList.toggle('open'));
+$('clearChat').addEventListener('click', () => {
+  if (!active) return;
+  conversations[active] = [];
+  renderThread();
+});
+
+loadAgents();
+</script>
+</body>
+</html>

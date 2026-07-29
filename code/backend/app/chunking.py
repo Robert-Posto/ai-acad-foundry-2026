@@ -17,6 +17,7 @@ from typing import Callable
 
 SENTENCE_END = re.compile(r"(?<=[.!?…])\s+")
 PARAGRAPH_SPLIT = re.compile(r"\n\s*\n")
+TABLE_ROW = re.compile(r"^\s*\|.*\|\s*$")
 
 EmbedFn = Callable[[list[str]], list[list[float]]]
 
@@ -24,6 +25,18 @@ EmbedFn = Callable[[list[str]], list[list[float]]]
 def split_sentences(text: str) -> list[str]:
     parts = [s.strip() for s in SENTENCE_END.split(text)]
     return [s for s in parts if s]
+
+
+def is_markdown_table(paragraph: str) -> bool:
+    """A block is a table when every non-blank line is a `| ... |` row.
+
+    Tables have no sentence-ending punctuation, so the sentence splitter sees
+    the whole thing as one giant "sentence" — and the oversized-sentence
+    fallback in chunk_dynamic used to hard-split it on raw characters,
+    severing rows mid-cell. Detecting it up front lets us keep it intact.
+    """
+    lines = [ln for ln in paragraph.splitlines() if ln.strip()]
+    return len(lines) >= 2 and all(TABLE_ROW.match(ln) for ln in lines)
 
 
 def cosine(a: list[float], b: list[float]) -> float:
@@ -73,6 +86,12 @@ def chunk_dynamic(text: str, size: int, overlap: int) -> list[str]:
     for paragraph in PARAGRAPH_SPLIT.split(text):
         paragraph = paragraph.strip()
         if not paragraph:
+            continue
+        if is_markdown_table(paragraph):
+            # never split a table — flush what's pending, emit it as its own
+            # chunk whole, even if that makes it larger than `size`.
+            flush()
+            chunks.append(paragraph)
             continue
         for sentence in split_sentences(paragraph):
             # a single sentence larger than the budget: hard-split as last resort

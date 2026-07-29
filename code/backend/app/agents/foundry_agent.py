@@ -20,7 +20,9 @@ Requires:  AZURE_AI_PROJECT_ENDPOINT   (Foundry portal → your project → Over
 """
 from __future__ import annotations
 
+import json
 import time
+from pathlib import Path
 
 import httpx
 
@@ -175,8 +177,18 @@ def availability() -> dict:
 
 def list_hosted() -> list[dict]:
     """Every agent in the project — whatever created it: our scripts, an SDK, or
-    somebody clicking in the portal."""
-    data = _call("GET", "assistants")
+    somebody clicking in the portal.
+
+    Requests the largest page this API accepts (still capped at 20 by the
+    service, regardless of `limit`). It reports `has_more: true` once the
+    shared class project holds enough assistants, but its `after` cursor does
+    not actually page forward on this API version — passing it back returns
+    the same first page again. So beyond these ~20, older agents are
+    genuinely not visible here, not just slow to load. A do-not-hang choice:
+    looping on a cursor that never advances would just re-fetch page one
+    forever, so we deliberately don't.
+    """
+    data = _call("GET", "assistants?limit=100")
     out: list[dict] = []
     for a in data.get("data", []):
         instructions = a.get("instructions") or ""
@@ -191,9 +203,63 @@ def list_hosted() -> list[dict]:
     return out
 
 
+CACHE_PATH = Path(__file__).parent / "hosted_ids.json"
+
+
+def _load_cache() -> dict[str, str]:
+    if not CACHE_PATH.exists():
+        return {}
+    try:
+        return json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+    except Exception:                             # noqa: BLE001 - a corrupt cache is not fatal
+        return {}
+
+
+def _remember(name: str, agent_id: str) -> None:
+    cache = _load_cache()
+    cache[name] = agent_id
+    CACHE_PATH.write_text(json.dumps(cache, indent=2), encoding="utf-8")
+
+
+def get_by_id(agent_id: str) -> dict | None:
+    """Fetch one assistant directly, by id — a single-resource GET, not a
+    list. Immune to the shared project's page-one-only listing limit."""
+    data = _call("GET", f"assistants/{agent_id}", allow=(404,))
+    if data.get("_status") == 404:
+        return None
+    instructions = data.get("instructions") or ""
+    return {
+        "agent_id": data.get("id"),
+        "name": data.get("name") or data.get("id"),
+        "model": data.get("model"),
+        "description": data.get("description"),
+        "created_at": data.get("created_at"),
+        "instructions_preview": instructions[:300],
+    }
+
+
 def find_hosted(name: str) -> dict | None:
+    """Resolve a persona name to its hosted agent.
+
+    Tries a direct id lookup first (from a small local cache written at
+    deploy time) — reliable regardless of how many other agents exist in the
+    shared project. Only falls back to *listing* (capped at ~20, see
+    `list_hosted`) for agents this backend never deployed itself, e.g. ones
+    made by someone else in the portal.
+    """
+    cached_id = _load_cache().get(name)
+    if cached_id:
+        agent = get_by_id(cached_id)
+        if agent:
+            return agent
+        # the cached id no longer resolves (deleted) — stop trusting it
+        cache = _load_cache()
+        cache.pop(name, None)
+        CACHE_PATH.write_text(json.dumps(cache, indent=2), encoding="utf-8")
+
     for agent in list_hosted():
         if agent["name"] == name:
+            _remember(name, agent["agent_id"])
             return agent
     return None
 
@@ -226,6 +292,8 @@ def deploy(persona: Persona, model: str | None = None) -> dict:
     else:
         agent = _call("POST", "assistants", body)
         action = "created"
+    if agent.get("id"):
+        _remember(persona.name, agent["id"])
 
     # Mirror onto the surface the portal lists, so the agent is visible there too.
     # This is presentation only — running still goes through /assistants — so a
