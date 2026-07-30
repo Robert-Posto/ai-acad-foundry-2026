@@ -1,3 +1,76 @@
+# Assignment 3 — Summary (read this first)
+
+*(Full chronological log, with every before/after test, is further down in
+this file under "Assignment 3 — Project notes". This section is the
+condensed version for hand-in.)*
+
+## The two ingestion + two retrieval improvements, and why
+
+**Ingestion #1 — stable chunk ids** (`app/vectorstore.py`). Before: every
+ingest generated a fresh random id, so re-running the loader on an unchanged
+corpus silently duplicated every point — hit this directly (46 → 38 points
+mid-session). Fixed by deriving ids from `source + chunk index`. **After:**
+ran the loader twice in a row — `points_count` stayed at 37 both times.
+
+**Ingestion #2 — real metadata in the payload** (`app/vectorstore.py`,
+`scripts/load_corpus.py`). Before: each document's front matter (`title`,
+`effective`, `version`, ...) was parsed only to print a log line, then
+discarded — none of it reached Qdrant. Fixed by storing it in every point's
+payload, which is also what makes retrieval improvement #2 possible.
+
+**Retrieval #2 — metadata filter, exclude superseded documents**
+(`app/main.py`). Before: two near-duplicate documents (2025 vs. 2026 welcome
+bonus terms) competed on cosine score alone — **measured the 2025, expired
+version scoring 0.5891, actually higher than the current 2026 version's
+0.5570.** Without a fix, the wrong document wins by default. Fixed by
+excluding points marked `superseded: true` unless explicitly requested.
+**After:** the same query returns only the 2026 chunks.
+
+**Retrieval #1 — score threshold** (`app/main.py`, `app/config.py`). Before:
+retrieval always returns its top-k regardless of relevance (on-topic queries
+score ~0.44–0.65, off-topic ~0.22, measured at Assignment 2) — whether a weak
+match got rejected depended entirely on the LLM's own judgement. Fixed with a
+`SCORE_THRESHOLD` (0.32) that answers "nothing relevant found" directly when
+nothing clears it. **After:** an off-topic mortgage question now returns
+`provider: "none"`, `usage: null` — zero LLM calls, guaranteed, instead of a
+hopeful refusal.
+
+## 15-question results (`data/questions.md`)
+
+12/15 clean correct, 2/15 correct with a minor issue, 1/15 wrong. The
+interesting failures:
+- **Q9** (list all steps of a procedure) is inconsistent — the chunk holding
+  the last two steps ranks 5th for this exact phrasing, so it depends on
+  `top_k` (needs ≥ 5 here). A persona style rule ("never summarize a
+  procedure") fixed the *generation*-side truncation earlier, but this is a
+  separate, *retrieval*-side ranking issue it can't fix.
+- **Q11** is the most useful finding: asked about student account
+  requirements, the assistant stated "Certificat de Înregistrare" as a
+  required document — that's the **business** account's requirement,
+  borrowed from a topically-adjacent but wrong chunk. Not a hallucination of
+  a fact (the fact is real, for a different account type) — a retrieval
+  precision problem.
+
+## What's still wrong / next steps
+
+- Conversation "history" in the frontend is visual only — `/ask` is
+  stateless, so there's no real multi-turn memory yet (deliberately deferred
+  per the course, but worth naming).
+- Q9's ranking issue and Q11's cross-document contamination both point at
+  the same fix: **re-ranking** (retrieve ~10, let the model pick the best
+  3–4) would likely catch both, since a model reading full chunks should
+  recognize "this is the wrong account type" better than raw cosine on
+  isolated sentences. Didn't implement it — next thing I'd do with more time.
+- The persona's rule against saying "in the retrieved passages" is a prompt
+  instruction, not enforced — observed it leak through once.
+- Foundry's agent listing is capped at ~20 by Azure itself, shared across
+  the whole class project; my fix (a local id cache written at deploy time)
+  only helps for agents this backend deployed itself.
+- No automated tests anywhere — every fix here was checked manually via
+  `curl` against the running backend, not proven repeatable.
+
+---
+
 # Assignment 2 — Notes
 
 ## Chunk counts (folder 1 — same input text, four strategies)

@@ -38,18 +38,23 @@ The information genuinely is not in this corpus — a confident answer here is a
 
 | # | Actual answer (summary) | Verdict |
 |---|---|---|
-| 1 | | |
-| 2 | | |
-| 3 | | |
-| 4 | | |
-| 5 | | |
-| 6 | | |
-| 7 | | |
-| 8 | | |
-| 9 | | |
-| 10 | | |
-| 11 | | |
-| 12 | | |
-| 13 | | |
-| 14 | | |
-| 15 | | |
+| 1 | 14, since Jan 2026 (was 16 before) | ✅ correct |
+| 2 | 0 lei online | ✅ correct |
+| 3 | 75 lei (2026 edition) | ✅ correct |
+| 4 | CI/EU ID or passport; expired docs auto-rejected | ✅ correct |
+| 5 | No minimum for Student accounts | ✅ correct |
+| 6 | Full activation flow incl. virtual/mailed cards | ✅ correct |
+| 7 | Full comparison, both accounts, all fields | ✅ correct (only after the table-chunking fix) |
+| 8 | Yes for Digital/Premium, combines eligibility + 2026 bonus terms | ✅ correct |
+| 9 | Lists all 8 steps when the right chunk is retrieved | ⚠️ inconsistent — the step-7/8 chunk ranks 5th for this exact phrasing; needs `top_k ≥ 5` to reliably appear (see NOTES.md) |
+| 10 | Age + co-sign conditions correct, but added an unrelated note about student bonus ineligibility | ⚠️ correct facts, one irrelevant fact injected |
+| 11 | Deposit answer correct, but listed "Certificat de Înregistrare" as a required document — that's the **business** account's requirement, not the student one's | ❌ wrong — retrieval pulled in the wrong document's requirements |
+| 12 | Business account requires a branch visit, 35 lei/month, no bonus | ✅ correct |
+| 13 | Refused — zero LLM calls, score threshold caught it before generation | ✅ correct (hard refusal) |
+| 14 | Refused, correctly — but reached the model first (2 passages still cleared the threshold) | ✅ correct (soft refusal, not threshold-triggered) |
+| 15 | Refused, correctly, same as above | ✅ correct (soft refusal) |
+
+**Score: 12/15 clean, 2/15 correct with a minor issue (9, 10), 1/15 wrong (11).**
+Question 11 is the most useful finding here — it's a genuine retrieval mistake
+(borrowing a fact from a topically-adjacent but wrong document), not a style
+or wording problem like the others.
