@@ -4,6 +4,7 @@ product: onboarding
 audience: retail
 effective: 2025-03-01
 version: 1
+superseded: true
 ---
 
 Note: this document describes the 2025 edition of the welcome bonus, which

@@ -155,3 +155,67 @@ chunk, never hard-split, even past the normal size budget.
   assistant now states fee, card type, ATM withdrawals *and* overdraft limit
   for **both** accounts, all cited from the single table chunk — no more
   "Premium details are missing from the provided documents."
+
+## Two more ingestion improvements + two retrieval improvements
+
+### Ingestion #1 — stable chunk ids (`app/vectorstore.py`)
+
+**Before**: every ingest generated fresh `uuid4()` ids, so re-running the
+loader on an unchanged corpus silently duplicated every point (hit this
+directly: 38 → 46 points after a second run in the middle of testing).
+
+**Fix**: ids are now derived deterministically from `source + chunk index`
+(`uuid5`), so the same document always maps to the same ids.
+
+**After, measured**: ran `scripts/load_corpus.py` twice in a row on a clean
+collection — `points_count` stayed at **37 both times** (would have been 74
+under the old behaviour).
+
+### Ingestion #2 — real metadata in the payload (`app/vectorstore.py`, `scripts/load_corpus.py`)
+
+**Before**: every document's front matter (`title`, `product`, `audience`,
+`effective`, `version`) was parsed by the loader just to print a nicer log
+line, then thrown away — none of it reached Qdrant.
+
+**Fix**: `/ingest` now accepts these fields and stores them in each point's
+payload; `/search` and `/ask` return `effective`/`version` on every hit.
+
+**After**: `welcome-bonus-2025.md` is now marked `superseded: true` in its
+own front matter — the one flag that makes retrieval improvement #2 below
+possible at all.
+
+### Retrieval #2 — metadata filter, exclude superseded documents (`app/main.py`, `app/vectorstore.py`)
+
+**Before**: `welcome-bonus-2025.md` and `welcome-bonus-2026.md` competed on
+cosine score alone for the query "how much is the welcome bonus" — measured
+**2025 scoring 0.5891, actually higher than 2026's 0.5570**. Without the
+fix, the *expired* terms would have won the top slot on a plain top-k search.
+
+**Fix**: `/search` and `/ask` now exclude points with `superseded: true` by
+default (`exclude_superseded`, via a Qdrant payload filter); an
+`include_superseded` flag brings the old behaviour back on request, for
+comparison.
+
+**After, measured**: same query, default settings — only `welcome-bonus-2026`
+chunks are returned. With `include_superseded: true`, the 2025 chunk
+reappears and outscores 2026 again (0.5891 vs 0.5570), confirming the
+filter — not luck — is what fixes it.
+
+### Retrieval #1 — score threshold (`app/main.py`, `app/config.py`)
+
+**Before**: retrieval always returns its top-k regardless of relevance
+(measured at Assignment 2: on-topic queries score ~0.44–0.65, off-topic
+~0.22). Whether a weak match got rejected depended entirely on the LLM
+noticing and refusing — a persona-level behaviour, not a system guarantee.
+
+**Fix**: `SCORE_THRESHOLD` (default `0.32`, chosen between the two measured
+ranges) drops hits below the floor in both `/search` and `/ask`. In `/ask`,
+if nothing clears the bar, the endpoint answers "I don't have anything
+relevant to that in the knowledge base" directly — **no LLM call is made**.
+
+**After, measured**: asked "What interest rate do you charge on mortgages?"
+(off-topic for this onboarding corpus) — response came back with
+`provider: "none"`, `model: "none"`, `usage: null` — a guaranteed, free,
+instant refusal instead of a hopeful one. A normal on-topic question
+("minimum age to open an account?") was unaffected — still answered
+normally with 4 retrieved passages.

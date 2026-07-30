@@ -81,39 +81,51 @@
     text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px;
   }
 
-  #contacts { flex: 1; overflow-y: auto; padding: 10px 10px; }
-  .contact {
-    display: flex; gap: 12px; align-items: flex-start;
-    padding: 11px 12px;
-    border-radius: 10px;
-    cursor: pointer;
-    border-left: 2.5px solid transparent;
-    position: relative;
-    transition: background 0.12s ease;
-  }
-  .contact:hover { background: color-mix(in srgb, var(--paccent, var(--accent)) 5%, transparent); }
-  .contact.active {
-    border-left-color: var(--paccent, var(--accent));
-    background: color-mix(in srgb, var(--paccent, var(--accent)) 8%, transparent);
-  }
   .avatar {
     width: 34px; height: 34px; border-radius: 50%; flex: none;
     background: var(--paccent, var(--accent)); color: #fff;
     display: flex; align-items: center; justify-content: center;
     font-family: var(--serif); font-weight: 600; font-size: 13px;
   }
-  .contact .meta { min-width: 0; padding-top: 1px; }
-  .contact .name { font-weight: 600; font-size: 13.5px; }
-  .contact .desc {
-    font-size: 11.5px; color: var(--muted); margin-top: 1px;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden; line-height: 1.35;
+
+  #agentPicker { padding: 14px 18px 4px; }
+  #agentPicker label {
+    font-size: 9.5px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.06em; font-family: var(--mono); display: block; margin-bottom: 5px;
   }
-  .contact .runs {
-    display: inline-block; margin-top: 5px; font-size: 9px; font-family: var(--mono);
-    padding: 1px 7px; border-radius: 999px;
-    border: 1px solid var(--border); color: var(--muted);
+  #agentSelect {
+    width: 100%; font-family: var(--sans); font-size: 13.5px; font-weight: 600;
+    color: var(--text); background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; cursor: pointer;
   }
+  #newChatBtn {
+    margin: 12px 18px 6px; padding: 8px; border-radius: 8px;
+    background: none; border: 1px dashed var(--border); color: var(--muted);
+    font-family: var(--mono); font-size: 11.5px; cursor: pointer;
+  }
+  #newChatBtn:hover { border-color: var(--paccent, var(--accent)); color: var(--paccent, var(--accent)); }
+
+  #chatList { flex: 1; overflow-y: auto; padding: 4px 10px 10px; }
+  .chat-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 9px 10px; border-radius: 8px; cursor: pointer;
+    border-left: 2.5px solid transparent;
+  }
+  .chat-item:hover { background: color-mix(in srgb, var(--paccent, var(--accent)) 5%, transparent); }
+  .chat-item.active {
+    border-left-color: var(--paccent, var(--accent));
+    background: color-mix(in srgb, var(--paccent, var(--accent)) 8%, transparent);
+  }
+  .chat-item .c-title {
+    font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .chat-item .c-time { font-size: 9px; font-family: var(--mono); color: var(--muted); margin-top: 2px; }
+  .chat-item .c-del {
+    background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px;
+    flex: none; padding: 0 2px; opacity: 0; transition: opacity 0.1s;
+  }
+  .chat-item:hover .c-del { opacity: 1; }
+  .chat-item .c-del:hover { color: var(--error-border); }
 
   #sidebar > footer {
     padding: 10px 18px; border-top: 1px solid var(--border);
@@ -136,18 +148,27 @@
     display: none; padding: 0 18px 12px; border-top: 1px solid var(--border);
   }
   #settingsPanel.open { display: block; }
-  #settingsPanel label {
+  #settingsPanel > label {
     font-size: 9.5px; color: var(--muted); text-transform: uppercase;
-    letter-spacing: 0.06em; font-family: var(--mono); display: block; margin: 10px 0 4px;
+    letter-spacing: 0.06em; font-family: var(--mono); display: block; margin: 12px 0 4px;
   }
   #baseUrl {
     width: 100%; font-size: 10.5px; color: var(--text);
     background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
     padding: 6px 8px; font-family: var(--mono);
   }
+  .settings-row {
+    display: flex; align-items: center; gap: 14px; font-size: 11.5px; color: var(--muted);
+  }
+  .settings-row .opt { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+  .settings-row .opt input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+  .settings-row .opt input[type="number"] {
+    width: 40px; padding: 2px 4px; font-family: var(--mono); font-size: 11px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text);
+  }
 
   /* ---------- main column ---------- */
-  #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
   #chatHeader {
     padding: 18px 28px; border-bottom: 1px solid var(--border);
     display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
@@ -171,16 +192,24 @@
   .mode-btn.active { background: var(--paccent, var(--accent)); color: #fff; }
   .mode-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .mode-hint { font-size: 10.5px; color: var(--muted); margin-top: 5px; text-align: right; font-style: italic; }
-  #clearChat {
-    background: none; border: none; color: var(--muted); cursor: pointer;
-    font-size: 11px; font-family: var(--mono); text-decoration: underline;
-    text-underline-offset: 2px; padding: 0; margin-top: 6px; display: block; margin-left: auto;
-  }
-  #clearChat:hover { color: var(--paccent, var(--accent)); }
+  .chat-header-title { display: flex; align-items: center; gap: 12px; }
   .run-tag {
     display: inline-block; font-size: 9.5px; font-family: var(--mono);
-    color: var(--muted); margin-top: 8px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
   }
+  .bubble-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 8px;
+  }
+  .speak-btn {
+    background: none; border: 1px solid var(--border); border-radius: 50%;
+    width: 26px; height: 26px; padding: 0; cursor: pointer; font-size: 12px; line-height: 1;
+    color: var(--muted); flex: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .speak-btn:hover { border-color: var(--paccent, var(--accent)); color: var(--paccent, var(--accent)); }
+  .speak-btn.playing { color: var(--paccent, var(--accent)); border-color: var(--paccent, var(--accent)); }
+  .speak-btn:disabled { opacity: 0.5; cursor: default; }
 
   #thread { flex: 1; overflow-y: auto; padding: 28px; display: flex; flex-direction: column; gap: 16px; }
   .row { display: flex; }
@@ -192,9 +221,9 @@
     padding: 13px 16px;
     font-size: 14px;
     line-height: 1.55;
-    white-space: pre-wrap;
     position: relative;
   }
+  .bubble-text { white-space: pre-wrap; }
   .row.user .bubble {
     background: var(--paccent, var(--accent)); color: var(--user-text);
     border-radius: 16px 16px 6px 16px;
@@ -218,6 +247,42 @@
     margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.04em;
   }
 
+  .meta-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tag {
+    font-size: 9.5px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.03em;
+    padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted);
+  }
+  .tag.gold { border-color: var(--refuse-border); color: var(--refuse-border); }
+  .tag.ok { border-color: #4d9a72; color: #4d9a72; }
+  .tag.error { border-color: var(--error-border); color: var(--error-border); }
+  .tag.refuse { border-color: var(--refuse-border); color: var(--refuse-border); }
+
+  .fact-check {
+    margin-top: 10px; padding: 9px 11px; border-radius: 8px;
+    background: var(--bg); border-left: 3px solid var(--border); font-size: 12px;
+  }
+  .fact-check.ok { border-left-color: #4d9a72; }
+  .fact-check.error { border-left-color: var(--error-border); }
+  .fact-check.refuse { border-left-color: var(--refuse-border); }
+  .fc-conf { font-family: var(--mono); font-size: 10.5px; color: var(--muted); margin-left: 6px; }
+  .fc-body { margin-top: 6px; }
+  .fc-sources { margin: 6px 0 0; padding-left: 16px; color: var(--muted); font-size: 11px; }
+  .fc-sources a { color: var(--paccent, var(--accent)); }
+
+  .prompt-toggle {
+    display: block; margin-top: 10px; background: none; border: none; cursor: pointer;
+    font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+    text-decoration: underline; text-underline-offset: 2px; padding: 0;
+  }
+  .prompt-toggle:hover { color: var(--paccent, var(--accent)); }
+  .prompt-card {
+    display: none; margin-top: 8px; padding: 10px 12px; border-radius: 8px;
+    background: var(--bg); border: 1px solid var(--border);
+    font-family: var(--mono); font-size: 11px; white-space: pre-wrap; max-height: 300px;
+    overflow-y: auto; color: var(--muted);
+  }
+  .prompt-card.open { display: block; }
+
   .citations { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 7px; }
   .citation-chip {
     font-size: 10.5px; font-family: var(--mono); font-weight: 600;
@@ -240,9 +305,26 @@
   }
   .source-card .score { color: var(--paccent, var(--accent)); font-weight: 700; }
 
-  .typing {
-    color: var(--muted); font-family: var(--serif); font-style: italic;
-    font-size: 13.5px; padding: 0 28px 14px;
+  .typing { padding: 0 28px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .typing-bubble {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px 16px 16px 16px; padding: 12px 16px; width: fit-content;
+  }
+  .typing-bubble span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--paccent, var(--accent)); opacity: 0.4;
+    animation: bounce 1.2s infinite;
+  }
+  .typing-bubble span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-bubble span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+  .typing-note {
+    font-family: var(--serif); font-style: italic; font-size: 12px;
+    color: var(--muted); margin-left: 4px;
   }
 
   #composer {
@@ -278,7 +360,12 @@
         <div class="sub">onboarding ledger</div>
       </div>
     </header>
-    <div id="contacts"><div class="empty">Loading agents…</div></div>
+    <div id="agentPicker">
+      <label for="agentSelect">Talking to</label>
+      <select id="agentSelect"><option>Loading agents…</option></select>
+    </div>
+    <button id="newChatBtn">+ new chat</button>
+    <div id="chatList"><div class="empty">Loading…</div></div>
     <footer>
       <div id="statusLine"><span id="statusDot"></span><span id="statusText">checking…</span></div>
       <button id="settingsBtn" title="Backend settings">⚙</button>
@@ -286,14 +373,26 @@
     <div id="settingsPanel">
       <label for="baseUrl">Backend URL</label>
       <input id="baseUrl" type="text" value="http://localhost:7799" spellcheck="false" />
+
+      <label for="topK">Conversation</label>
+      <div class="settings-row">
+        <label class="opt"><input type="checkbox" id="useRag" checked /> grounded (RAG)</label>
+        <label class="opt">top k <input type="number" id="topK" min="1" max="10" value="3" /></label>
+      </div>
+      <div class="settings-row">
+        <label class="opt"><input type="checkbox" id="factCheck" /> fact-check against the web</label>
+      </div>
     </div>
   </aside>
 
   <main id="main">
     <div id="chatHeader">
-      <div>
-        <div class="name" id="activeName">Select an agent</div>
-        <div class="desc" id="activeDesc"></div>
+      <div class="chat-header-title">
+        <div class="avatar" id="activeAvatar"></div>
+        <div>
+          <div class="name" id="activeName">Select an agent</div>
+          <div class="desc" id="activeDesc"></div>
+        </div>
       </div>
       <div>
         <div id="modeToggle" class="mode-toggle">
@@ -301,11 +400,13 @@
           <button class="mode-btn" data-mode="foundry">Foundry agent</button>
         </div>
         <div class="mode-hint" id="modeHint"></div>
-        <button id="clearChat">clear conversation</button>
       </div>
     </div>
     <div id="thread"><div class="empty">Pick a persona on the left, then ask about opening or activating a Libra Bank account.</div></div>
-    <div class="typing" id="typing" style="display:none">Libra Assist is thinking…</div>
+    <div class="typing" id="typing" style="display:none">
+      <div class="typing-bubble"><span></span><span></span><span></span></div>
+      <div class="typing-note" id="typingNote"></div>
+    </div>
     <div id="composer">
       <textarea id="question" placeholder="Ask about eligibility, fees, the welcome bonus, activation…" rows="1"></textarea>
       <button id="send">Send</button>
@@ -322,7 +423,75 @@ let agents = [];
 let active = null;
 let mode = 'local';
 let foundryInfo = { available: false, reason: null };
-const conversations = {}; // { personaName: [{role, text, sources, refused, error}] }
+const STORAGE_KEY = 'libra-assist-conversations';
+
+// Per persona: { activeChat: id, chats: { id: { title, createdAt, messages } } }
+// Each persona can hold several separate conversations, like chat threads —
+// not just one running log.
+let conversations = loadConversations();
+
+function loadConversations() {
+  let raw;
+  try { raw = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+  // Migrate the old shape (persona -> flat message array) into the new one.
+  for (const [name, val] of Object.entries(raw)) {
+    if (Array.isArray(val)) {
+      const id = newChatId();
+      raw[name] = { activeChat: id, chats: { [id]: { title: chatTitle(val), createdAt: Date.now(), messages: val } } };
+    }
+  }
+  return raw;
+}
+
+function saveConversations() {
+  // audioUrl holds a blob: URL — it dies with the page, so don't persist it;
+  // it just gets re-fetched from /tools/speak next time someone hits play.
+  const clean = {};
+  for (const [name, state] of Object.entries(conversations)) {
+    const chats = {};
+    for (const [id, chat] of Object.entries(state.chats)) {
+      chats[id] = { ...chat, messages: chat.messages.map(({ audioUrl, ...rest }) => rest) };
+    }
+    clean[name] = { activeChat: state.activeChat, chats };
+  }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(clean)); } catch { /* storage full/blocked — not fatal */ }
+}
+
+function newChatId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function chatTitle(messages) {
+  const first = messages.find(m => m.role === 'user');
+  if (!first) return 'New conversation';
+  return first.text.length > 42 ? first.text.slice(0, 42) + '…' : first.text;
+}
+
+function ensurePersona(name) {
+  if (!conversations[name]) conversations[name] = { activeChat: null, chats: {} };
+  const state = conversations[name];
+  if (!state.activeChat || !state.chats[state.activeChat]) startNewChat(name);
+  return state;
+}
+
+function startNewChat(name) {
+  conversations[name] = conversations[name] || { activeChat: null, chats: {} };
+  const id = newChatId();
+  conversations[name].chats[id] = { title: 'New conversation', createdAt: Date.now(), messages: [] };
+  conversations[name].activeChat = id;
+  return id;
+}
+
+function currentChat() {
+  if (!active) return null;
+  const state = ensurePersona(active);
+  return state.chats[state.activeChat];
+}
+
+function currentMessages() {
+  return currentChat()?.messages || [];
+}
 
 // Each persona gets its own identity colour, cycling through a curated,
 // ledger-appropriate palette — deterministic by position in the agent list.
@@ -340,8 +509,10 @@ const REFUSAL_HINTS = [
   'not in the provided documents', "isn't in the provided",
 ];
 
-function looksLikeRefusal(text, retrievedCount) {
-  if (retrievedCount === 0) return true;
+function looksLikeRefusal(text, retrievedCount, ragRequested) {
+  // Empty retrieval only means "nothing relevant" when RAG was actually on —
+  // with RAG off there is never anything retrieved, by design, not by failure.
+  if (ragRequested && retrievedCount === 0) return true;
   // Only the OPENING of the answer counts. A genuine refusal leads with it
   // ("I don't know...", "The provided documents contain no information...");
   // a mostly-grounded answer that later admits one missing sub-detail should
@@ -371,33 +542,24 @@ async function loadAgents() {
     dot.className = 'ok'; text.textContent = `online · ${health.llm.provider}/${health.llm.model}`;
   } catch (e) {
     dot.className = 'bad'; text.textContent = 'backend unreachable';
-    $('contacts').innerHTML = `<div class="empty">Can't reach ${base()} — check the URL and that the backend is running.</div>`;
+    $('chatList').innerHTML = `<div class="empty">Can't reach ${base()} — check the URL and that the backend is running.</div>`;
     return;
   }
   try {
     const data = await api('/agents');
     agents = data.personas;
     foundryInfo = data.foundry || { available: false, reason: null };
-    renderContacts();
+    renderAgentSelect();
     if (agents.length) selectAgent(agents[0].name);
   } catch (e) {
-    $('contacts').innerHTML = `<div class="empty">Error loading agents: ${e.message}</div>`;
+    $('chatList').innerHTML = `<div class="empty">Error loading agents: ${e.message}</div>`;
   }
 }
 
-function renderContacts() {
-  $('contacts').innerHTML = agents.map(a => `
-    <div class="contact ${a.name === active ? 'active' : ''}" data-name="${a.name}" style="--paccent: ${personaColor(a.name)}">
-      <div class="avatar">${initials(a.display_name)}</div>
-      <div class="meta">
-        <div class="name">${a.display_name}</div>
-        <div class="desc">${a.description}</div>
-        <span class="runs">${a.runs_on}</span>
-      </div>
-    </div>
-  `).join('');
-  [...document.querySelectorAll('.contact')].forEach(el =>
-    el.addEventListener('click', () => selectAgent(el.dataset.name)));
+function renderAgentSelect() {
+  $('agentSelect').innerHTML = agents.map(a =>
+    `<option value="${a.name}" ${a.name === active ? 'selected' : ''}>${a.display_name} — ${a.runs_on}</option>`
+  ).join('');
 }
 
 function selectAgent(name) {
@@ -405,9 +567,12 @@ function selectAgent(name) {
   const a = agents.find(x => x.name === name);
   $('activeName').textContent = a.display_name;
   $('activeDesc').textContent = a.description;
+  $('activeAvatar').textContent = initials(a.display_name);
   document.documentElement.style.setProperty('--paccent', personaColor(name));
-  renderContacts();
+  ensurePersona(name);
+  renderAgentSelect();
   renderThread();
+  renderChatList();
   updateModeToggle();
 }
 
@@ -449,14 +614,14 @@ document.addEventListener('click', e => {
 
 function renderThread() {
   const thread = $('thread');
-  const msgs = conversations[active] || [];
+  const msgs = currentMessages();
   if (!msgs.length) {
     thread.innerHTML = '<div class="empty">Say hello — ask about eligibility, fees, the welcome bonus, or how to activate your account.</div>';
     return;
   }
   thread.innerHTML = msgs.map((m, i) => {
     if (m.role === 'user') {
-      return `<div class="row user"><div class="bubble">${escapeHtml(m.text)}</div></div>`;
+      return `<div class="row user"><div class="bubble"><div class="bubble-text">${escapeHtml(m.text)}</div></div></div>`;
     }
     const cls = m.error ? 'error' : (m.refused ? 'refused' : '');
     const flag = m.error
@@ -472,12 +637,45 @@ function renderThread() {
       </div>
     `).join('');
     const runTag = m.ranMode ? `<div class="run-tag">ran via ${m.ranMode}</div>` : '';
+
+    const meta = m.error ? '' : `<div class="meta-tags">
+      <span class="tag ${m.augmented ? 'gold' : ''}">${m.augmented ? 'grounded' : 'no retrieval'}</span>
+      ${m.model ? `<span class="tag">${m.model}</span>` : ''}
+      ${m.usage ? `<span class="tag">${m.usage.prompt_tokens ?? '?'}↑ ${m.usage.completion_tokens ?? '?'}↓ tokens</span>` : ''}
+    </div>`;
+
+    const fc = m.factCheck;
+    const fcClass = fc ? (fc.verdict === 'contradicted' ? 'error' : fc.verdict === 'supported' ? 'ok' : 'refuse') : '';
+    const factCheckCard = fc ? `
+      <div class="fact-check ${fcClass}">
+        <span class="tag ${fcClass}">fact-check: ${fc.verdict}</span>
+        <span class="fc-conf">${fc.confidence} confidence · ${fc.evidence_from}</span>
+        ${fc.error ? `<div class="fc-body">${escapeHtml(fc.error)}</div>` : `<div class="fc-body">${escapeHtml(fc.reasoning)}</div>`}
+        ${fc.sources?.length ? `<ul class="fc-sources">${fc.sources.map(sc => `
+          <li><a href="${sc.url}" target="_blank" rel="noreferrer">${escapeHtml(sc.title || sc.url)}</a>
+          ${sc.used ? `(${sc.chars_read} chars read)` : '(could not be read)'}</li>`).join('')}</ul>` : ''}
+      </div>` : '';
+
+    const promptToggle = !m.error ? `
+      <button class="prompt-toggle" data-msg="${i}">the exact prompt that was sent</button>
+      <pre class="prompt-card" data-msg="${i}" id="prompt-${i}">SYSTEM:
+${escapeHtml(m.systemPrompt || '')}
+
+USER:
+${escapeHtml(m.promptSent || '')}</pre>` : '';
+
     return `<div class="row assistant">
       <div class="bubble ${cls}">
         ${flag}
-        ${escapeHtml(m.text)}
+        <div class="bubble-text">${escapeHtml(m.text)}</div>
+        ${meta}
         ${chips ? `<div class="citations">${chips}</div>${cards}` : ''}
-        ${runTag}
+        ${factCheckCard}
+        ${promptToggle}
+        <div class="bubble-footer">
+          ${runTag}
+          <button class="speak-btn" data-msg="${i}" title="Read this answer aloud">🔊</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -489,10 +687,106 @@ function renderThread() {
       card.classList.toggle('open');
     });
   });
+
+  [...document.querySelectorAll('.prompt-toggle')].forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById(`prompt-${btn.dataset.msg}`).classList.toggle('open');
+    });
+  });
+
+  [...document.querySelectorAll('.speak-btn')].forEach(btn => {
+    btn.addEventListener('click', () => speakMessage(btn, msgs[btn.dataset.msg]));
+  });
+}
+
+let currentAudio = null;   // the <audio> element currently loaded/playing
+let currentBtn = null;     // the button that owns it
+
+function resetSpeakBtn(btn) {
+  btn.classList.remove('playing');
+  btn.textContent = '🔊';
+}
+
+async function speakMessage(btn, msg) {
+  // Same button clicked again: it already owns the audio — just toggle it,
+  // never re-fetch or re-synthesize.
+  if (currentBtn === btn && currentAudio) {
+    if (currentAudio.paused) { currentAudio.play(); btn.classList.add('playing'); btn.textContent = '⏸'; }
+    else { currentAudio.pause(); btn.classList.remove('playing'); btn.textContent = '🔊'; }
+    return;
+  }
+
+  // A different message was playing — stop it and reset its button.
+  if (currentAudio) { currentAudio.pause(); }
+  if (currentBtn) resetSpeakBtn(currentBtn);
+  currentAudio = null; currentBtn = null;
+
+  if (msg.audioUrl) {
+    // Already synthesized once this session — replay instantly, no fetch.
+    playAudio(btn, msg.audioUrl);
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const res = await fetch(base() + '/tools/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: msg.text.slice(0, 3000) }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error((body && body.detail) || res.statusText);
+    }
+    const blob = await res.blob();
+    msg.audioUrl = URL.createObjectURL(blob);
+    btn.disabled = false;
+    playAudio(btn, msg.audioUrl);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = '⚠';
+    btn.title = e.message;
+    setTimeout(() => { btn.textContent = '🔊'; btn.title = 'Read this answer aloud'; }, 2500);
+  }
+}
+
+function playAudio(btn, url) {
+  const audio = new Audio(url);
+  currentAudio = audio; currentBtn = btn;
+  btn.classList.add('playing'); btn.textContent = '⏸';
+  audio.play();
+  audio.addEventListener('ended', () => {
+    resetSpeakBtn(btn);
+    if (currentAudio === audio) { currentAudio = null; currentBtn = null; }
+  });
 }
 
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+const THINKING_PHRASES = [
+  'Checking the ledger…',
+  'Looking through onboarding documents…',
+  'Cross-referencing sources…',
+];
+let typingInterval = null;
+
+function startTyping() {
+  const thread = $('thread');
+  $('typing').style.display = 'flex';
+  let i = 0;
+  $('typingNote').textContent = THINKING_PHRASES[0];
+  thread.scrollTop = thread.scrollHeight;
+  typingInterval = setInterval(() => {
+    i = (i + 1) % THINKING_PHRASES.length;
+    $('typingNote').textContent = THINKING_PHRASES[i];
+  }, 1600);
+}
+
+function stopTyping() {
+  $('typing').style.display = 'none';
+  clearInterval(typingInterval);
+  typingInterval = null;
 }
 
 async function send() {
@@ -500,28 +794,37 @@ async function send() {
   if (!q || !active) return;
   $('question').value = '';
   autoGrow();
-  conversations[active] = conversations[active] || [];
-  conversations[active].push({ role: 'user', text: q });
+  const chat = currentChat();
+  chat.messages.push({ role: 'user', text: q });
+  if (chat.messages.length === 1) { chat.title = chatTitle(chat.messages); renderChatList(); }
   renderThread();
 
   $('send').disabled = true;
-  $('typing').style.display = 'block';
+  startTyping();
   try {
     const data = await api('/ask', {
       method: 'POST',
-      body: JSON.stringify({ question: q, use_rag: true, agent: active, agent_mode: mode }),
+      body: JSON.stringify({
+        question: q, agent: active, agent_mode: mode,
+        use_rag: $('useRag').checked, top_k: Number($('topK').value) || 3,
+        fact_check: $('factCheck').checked,
+      }),
     });
-    const refused = looksLikeRefusal(data.answer, (data.retrieved || []).length);
-    conversations[active].push({
+    const refused = looksLikeRefusal(data.answer, (data.retrieved || []).length, $('useRag').checked);
+    chat.messages.push({
       role: 'assistant', text: data.answer, sources: data.retrieved || [], refused,
       ranMode: data.agent ? data.agent.mode : mode,
+      augmented: data.augmented, model: data.model, usage: data.usage,
+      systemPrompt: data.system_prompt, promptSent: data.prompt_sent,
+      factCheck: data.fact_check,
     });
   } catch (e) {
-    conversations[active].push({ role: 'assistant', text: e.message, error: true });
+    chat.messages.push({ role: 'assistant', text: e.message, error: true });
   }
-  $('typing').style.display = 'none';
+  stopTyping();
   $('send').disabled = false;
   renderThread();
+  saveConversations();
 }
 
 function autoGrow() {
@@ -537,11 +840,53 @@ $('question').addEventListener('keydown', e => {
 });
 $('baseUrl').addEventListener('change', loadAgents);
 $('settingsBtn').addEventListener('click', () => $('settingsPanel').classList.toggle('open'));
-$('clearChat').addEventListener('click', () => {
+
+$('agentSelect').addEventListener('change', (e) => selectAgent(e.target.value));
+
+$('newChatBtn').addEventListener('click', () => {
   if (!active) return;
-  conversations[active] = [];
+  startNewChat(active);
   renderThread();
+  renderChatList();
+  saveConversations();
 });
+
+function renderChatList() {
+  if (!active) return;
+  const state = ensurePersona(active);
+  const chats = Object.entries(state.chats).sort((a, b) => b[1].createdAt - a[1].createdAt);
+  $('chatList').innerHTML = chats.map(([id, chat]) => `
+    <div class="chat-item ${id === state.activeChat ? 'active' : ''}" data-chat="${id}">
+      <div>
+        <div class="c-title">${escapeHtml(chat.title)}</div>
+        <div class="c-time">${new Date(chat.createdAt).toLocaleDateString()}</div>
+      </div>
+      <button class="c-del" data-del="${id}" title="Delete this conversation">×</button>
+    </div>
+  `).join('');
+
+  [...document.querySelectorAll('.chat-item')].forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.c-del')) return;
+      conversations[active].activeChat = el.dataset.chat;
+      renderThread();
+      renderChatList();
+      saveConversations();
+    });
+  });
+  [...document.querySelectorAll('.c-del')].forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.del;
+      delete conversations[active].chats[id];
+      if (conversations[active].activeChat === id) conversations[active].activeChat = null;
+      ensurePersona(active);
+      renderThread();
+      renderChatList();
+      saveConversations();
+    });
+  });
+}
 
 loadAgents();
 </script>
