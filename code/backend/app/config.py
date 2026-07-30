@@ -21,6 +21,9 @@ class Settings(BaseSettings):
 
     # --- retrieval / generation defaults ------------------------------------
     top_k: int = 4
+    # Measured on the onboarding corpus: on-topic queries score ~0.44-0.65,
+    # off-topic ones ~0.22 (see NOTES.md). 0.32 sits cleanly between the two.
+    score_threshold: float = 0.32
     llm_temperature: float = 0.2
     llm_max_tokens: int = 2500   # reasoning models spend part of this budget thinking
 

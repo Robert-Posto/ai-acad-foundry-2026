@@ -270,7 +270,11 @@ def ingest(req: IngestRequest) -> IngestResponse:
         store.ensure_collection(dim)
     except DimensionMismatch as e:
         raise HTTPException(status_code=409, detail=str(e))
-    ids = store.upsert(pieces, vectors, p["strategy"], req.source)
+    metadata = {
+        "title": req.title, "product": req.product, "audience": req.audience,
+        "effective": req.effective, "version": req.version, "superseded": req.superseded,
+    }
+    ids = store.upsert(pieces, vectors, p["strategy"], req.source, metadata=metadata)
     return IngestResponse(
         strategy=p["strategy"], count=len(pieces), vector_dimension=dim,
         embedding_preview=[round(x, 5) for x in vectors[0][:8]],
@@ -300,8 +304,10 @@ def search(req: SearchRequest) -> SearchResponse:
     if not store.info()["exists"]:
         raise HTTPException(status_code=404, detail="Collection is empty — POST /ingest first.")
     top_k = req.top_k or settings.top_k
+    threshold = settings.score_threshold if req.min_score is None else req.min_score
     qvec = _embed([req.query])[0]
-    hits = store.search(qvec, top_k)
+    hits = store.search(qvec, top_k, exclude_superseded=not req.include_superseded)
+    hits = [h for h in hits if h["score"] >= threshold]
     return SearchResponse(
         query=req.query, top_k=top_k, embedding_model=_embedder().describe(),
         query_embedding_preview=[round(x, 5) for x in qvec[:8]],
@@ -351,7 +357,32 @@ def ask(req: AskRequest) -> AskResponse:
                                        "or set use_rag=false for a plain LLM answer.")
         top_k = req.top_k or settings.top_k
         qvec = _embed([req.question])[0]
-        retrieved = [SearchHit(**h) for h in store.search(qvec, top_k)]
+        retrieved = [SearchHit(**h) for h in
+                    store.search(qvec, top_k, exclude_superseded=not req.include_superseded)]
+
+        # Score threshold: retrieval always returns its top-k, relevant or not.
+        # Below the floor, don't hand the model weak matches to rationalize —
+        # answer "nothing relevant found" directly, with no LLM call at all.
+        threshold = settings.score_threshold if req.min_score is None else req.min_score
+        retrieved = [h for h in retrieved if h.score >= threshold]
+        if not retrieved:
+            info = AgentInfo(
+                name=persona.name, display_name=persona.display_name,
+                description=persona.description, mode="local",
+                temperature=persona.temperature, style_rules=persona.style_rules,
+            ) if persona is not None else AgentInfo(
+                name=hosted_only["name"], display_name=hosted_only["name"],
+                description=hosted_only.get("description") or "Hosted in Foundry — no local persona file.",
+                mode="local",
+            )
+            return AskResponse(
+                answer="That's not something I can help with here — I only handle account "
+                       "onboarding at Libra Bank.",
+                augmented=True, fact_check=None, provider="none", model="none", agent=info,
+                system_prompt="(skipped — no passage cleared the score threshold)",
+                prompt_sent=req.question, retrieved=[],
+                usage=Usage(prompt_tokens=None, completion_tokens=None),
+            )
 
     chunks = [h.model_dump() for h in retrieved]
     mode = mode_requested

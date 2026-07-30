@@ -51,9 +51,14 @@ class VectorStore:
 
     # --- data ----------------------------------------------------------------
     def upsert(self, chunks: list[str], vectors: list[list[float]], strategy: str,
-               source: str | None) -> list[str]:
-        ids = [str(uuid.uuid4()) for _ in chunks]
+               source: str | None, metadata: dict | None = None) -> list[str]:
+        # Deterministic ids, derived from source + position: re-ingesting the
+        # same document produces the SAME ids, so Qdrant *replaces* the old
+        # points instead of piling up duplicates next to them.
+        source_key = source or "adhoc"
+        ids = [str(uuid.uuid5(uuid.NAMESPACE_URL, f"{source_key}:{i}")) for i in range(len(chunks))]
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        meta = metadata or {}
         self.client.upsert(
             collection_name=self.collection,
             points=[
@@ -64,8 +69,9 @@ class VectorStore:
                         "text": text,
                         "index": i,
                         "strategy": strategy,
-                        "source": source or "adhoc",
+                        "source": source_key,
                         "ingested_at": now,
+                        **{k: v for k, v in meta.items() if v is not None},
                     },
                 )
                 for i, (pid, text, vec) in enumerate(zip(ids, chunks, vectors))
@@ -73,9 +79,18 @@ class VectorStore:
         )
         return ids
 
-    def search(self, vector: list[float], top_k: int) -> list[dict]:
+    def search(self, vector: list[float], top_k: int, exclude_superseded: bool = True) -> list[dict]:
+        query_filter = None
+        if exclude_superseded:
+            # Metadata filter: documents marked `superseded` (an older version
+            # replaced by a newer one, e.g. last year's promo terms) don't
+            # compete for a slot unless explicitly asked for.
+            query_filter = models.Filter(
+                must_not=[models.FieldCondition(key="superseded", match=models.MatchValue(value=True))]
+            )
         hits = self.client.query_points(
-            collection_name=self.collection, query=vector, limit=top_k, with_payload=True
+            collection_name=self.collection, query=vector, limit=top_k,
+            with_payload=True, query_filter=query_filter,
         ).points
         return [
             {
@@ -85,6 +100,8 @@ class VectorStore:
                 "index": (h.payload or {}).get("index"),
                 "strategy": (h.payload or {}).get("strategy"),
                 "source": (h.payload or {}).get("source"),
+                "effective": (h.payload or {}).get("effective"),
+                "version": (h.payload or {}).get("version"),
             }
             for h in hits
         ]

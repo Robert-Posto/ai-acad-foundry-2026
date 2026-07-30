@@ -52,6 +52,15 @@ class IngestRequest(ChunkRequest):
     }]}}
 
     source: Optional[str] = Field(None, description="Label stored with every chunk (e.g. 'cards-faq')")
+    title: Optional[str] = Field(None, description="Document title, stored in payload for display/filtering")
+    product: Optional[str] = Field(None, description="Product line, e.g. 'onboarding' — for metadata filters")
+    audience: Optional[str] = Field(None, description="Who this document is for, e.g. 'retail', 'student'")
+    effective: Optional[str] = Field(None, description="Date this version took effect, ISO format")
+    version: Optional[int] = Field(None, description="Document version number")
+    superseded: Optional[bool] = Field(
+        False, description="True for an older document a newer version has replaced — "
+                           "excluded from retrieval by default (see /search, /ask)."
+    )
 
 
 class IngestResponse(BaseModel):
@@ -73,6 +82,16 @@ class SearchRequest(BaseModel):
 
     query: str = Field(..., min_length=1)
     top_k: Optional[int] = Field(None, ge=1, le=50)
+    include_superseded: bool = Field(
+        False, description="Include documents marked `superseded` (an older version a newer "
+                           "one replaced) — off by default, so an expired promo can't outscore "
+                           "the current one."
+    )
+    min_score: Optional[float] = Field(
+        None, ge=0, le=1, description="Drop hits below this cosine score. Defaults to "
+                                      "SCORE_THRESHOLD in .env — pass 0 to see the raw, "
+                                      "unfiltered top-k instead."
+    )
 
 
 class SearchHit(BaseModel):
@@ -81,6 +100,8 @@ class SearchHit(BaseModel):
     index: Optional[int] = None
     strategy: Optional[str] = None
     source: Optional[str] = None
+    effective: Optional[str] = None
+    version: Optional[int] = None
     id: str
 
 
@@ -122,6 +143,13 @@ class AskRequest(BaseModel):
         default_factory=list,
         description="Check against these pages instead of searching — deterministic, and "
                     "immune to search rate limits during a demo.",
+    )
+    include_superseded: bool = Field(
+        False, description="Include documents marked `superseded` when retrieving for RAG."
+    )
+    min_score: Optional[float] = Field(
+        None, ge=0, le=1, description="Drop retrieved passages below this cosine score before "
+                                      "grounding the answer. Defaults to SCORE_THRESHOLD."
     )
 
 

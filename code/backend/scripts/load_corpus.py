@@ -52,8 +52,15 @@ def main() -> None:
                 print(f"  skip  {source} (empty body)")
                 continue
 
+            effective = meta.get("effective")
             resp = client.post("/ingest", json={
                 "text": body, "strategy": STRATEGY, "source": source,
+                "title": meta.get("title"),
+                "product": meta.get("product"),
+                "audience": meta.get("audience"),
+                "effective": str(effective) if effective is not None else None,
+                "version": meta.get("version"),
+                "superseded": bool(meta.get("superseded", False)),
             })
             if resp.status_code != 200:
                 print(f"  FAIL  {source} -> {resp.status_code} {resp.text[:200]}")
